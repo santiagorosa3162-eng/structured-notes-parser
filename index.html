@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clarity — Structured Notes Utility</title>
+  <meta name="description" content="Organize raw meeting notes into categorized, structured output." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ══════════════════════════════════════════════════════════
+       DESIGN TOKENS
+       ══════════════════════════════════════════════════════════ */
+    :root {
+      --bg:            #0C0D11;
+      --bg-raised:     #13141A;
+      --bg-card:       #181A22;
+      --bg-input:      #111218;
+      --bg-hover:      #1E2028;
+      --bg-surface:    #1F2129;
+      --text-100:      #F2F0EB;
+      --text-200:      #C8C4BC;
+      --text-300:      #8A8580;
+      --text-400:      #5C5853;
+      --accent:        #9B7045;
+      --accent-light:  #C49460;
+      --accent-dim:    rgba(155, 112, 69, 0.10);
+      --green:         #4D9375;
+      --green-bg:      rgba(77, 147, 117, 0.10);
+      --blue:          #5880AB;
+      --blue-bg:       rgba(88, 128, 171, 0.10);
+      --purple:        #8B6EAD;
+      --purple-bg:     rgba(139, 110, 173, 0.10);
+      --amber:         #B89040;
+      --amber-bg:      rgba(184, 144, 64, 0.10);
+      --red:           #B85C4A;
+      --red-bg:        rgba(184, 92, 74, 0.10);
+      --border:        rgba(255,255,255,0.05);
+      --border-mid:    rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.12);
+      --radius:        14px;
+      --radius-sm:     10px;
+      --shadow-s:      0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+      --shadow-m:      0 4px 16px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2);
+      --shadow-l:      0 14px 44px rgba(0,0,0,0.4), 0 4px 14px rgba(0,0,0,0.2);
+      --shadow-glow:   0 4px 24px rgba(155,112,69,0.22), 0 2px 6px rgba(155,112,69,0.12);
+      --font-display:  'Instrument Serif', Georgia, serif;
+      --font-body:     'Manrope', system-ui, sans-serif;
+      --ease:          cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text-100);
+      line-height: 1.6;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content:'';
+      position:fixed; inset:0;
+      opacity:0.022;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      pointer-events:none; z-index:0;
+    }
+
+    body::after {
+      content:'';
+      position:fixed;
+      top:-280px; left:50%;
+      transform:translateX(-50%);
+      width:900px; height:560px;
+      background:radial-gradient(ellipse, rgba(155,112,69,0.05) 0%, transparent 65%);
+      pointer-events:none; z-index:0;
+    }
+
+    .app {
+      position:relative; z-index:1;
+      max-width:820px;
+      margin:0 auto;
+      padding:48px 24px 100px;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      text-align:center;
+      margin-bottom:48px;
+      animation: fadeUp .7s var(--ease);
+    }
+
+    .header__brand {
+      display:inline-flex;
+      align-items:center;
+      gap:11px;
+      margin-bottom:16px;
+    }
+
+    .header__mark {
+      width:38px; height:38px;
+      background:linear-gradient(140deg, var(--accent), #7A5530);
+      border-radius:9px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow: var(--shadow-glow);
+    }
+
+    .header__mark svg { width:19px; height:19px; }
+
+    .header h1 {
+      font-family:var(--font-display);
+      font-size:2.2rem;
+      font-weight:400;
+      letter-spacing:-0.03em;
+    }
+
+    .header__rule {
+      width:32px; height:2px;
+      background:linear-gradient(90deg, transparent, var(--accent), transparent);
+      margin:14px auto 16px;
+    }
+
+    .header p {
+      color:var(--text-200);
+      font-size:.9rem;
+      font-weight:300;
+      max-width:440px;
+      margin:0 auto;
+      line-height:1.75;
+    }
+
+    .header__kbd {
+      display:inline-block;
+      margin-top:10px;
+      font-size:.68rem;
+      font-weight:500;
+      color:var(--text-400);
+      letter-spacing:.04em;
+    }
+
+    .header__kbd kbd {
+      display:inline-block;
+      padding:2px 7px;
+      border:1px solid var(--border-mid);
+      border-radius:4px;
+      background:var(--bg-raised);
+      font-family:var(--font-body);
+      font-size:.68rem;
+      color:var(--text-300);
+      margin:0 1px;
+    }
+
+    /* ── INPUT CARD ── */
+    .input-card {
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:26px 28px 28px;
+      box-shadow:var(--shadow-s);
+      margin-bottom:14px;
+      animation: fadeUp .7s var(--ease) .06s both;
+      transition:box-shadow .35s var(--ease), border-color .35s var(--ease);
+    }
+
+    .input-card:focus-within {
+      border-color:var(--border-mid);
+      box-shadow:var(--shadow-m);
+    }
+
+    .input-card__top {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:12px;
+    }
+
+    .input-card__label {
+      display:flex;
+      align-items:center;
+      gap:7px;
+      font-size:.7rem;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      color:var(--text-400);
+    }
+
+    .input-card__label svg { width:13px; height:13px; opacity:.5; }
+
+    .input-card__sample {
+      font-size:.7rem;
+      font-weight:500;
+      color:var(--accent);
+      background:none;
+      border:none;
+      cursor:pointer;
+      font-family:var(--font-body);
+      letter-spacing:.02em;
+      transition:color .2s;
+    }
+
+    .input-card__sample:hover { color:var(--accent-light); }
+
+    .input-card textarea {
+      width:100%;
+      min-height:190px;
+      padding:16px 18px;
+      border:1.5px solid var(--border);
+      border-radius:var(--radius-sm);
+      background:var(--bg-input);
+      font-family:var(--font-body);
+      font-size:.88rem;
+      font-weight:300;
+      line-height:1.8;
+      color:var(--text-100);
+      resize:vertical;
+      transition:border-color .3s var(--ease), box-shadow .3s var(--ease);
+    }
+
+    .input-card textarea::placeholder { color:var(--text-400); font-weight:300; }
+
+    .input-card textarea:focus {
+      outline:none;
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px var(--accent-dim), inset 0 1px 3px rgba(0,0,0,.2);
+    }
+
+    .input-card textarea::-webkit-scrollbar { width:5px; }
+    .input-card textarea::-webkit-scrollbar-track { background:transparent; }
+    .input-card textarea::-webkit-scrollbar-thumb { background:var(--border-mid); border-radius:3px; }
+
+    .input-card.drag-over {
+      border-color:var(--accent) !important;
+      box-shadow:0 0 0 3px var(--accent-dim), var(--shadow-m) !important;
+    }
+
+    /* ── ACTION BAR ── */
+    .action-bar {
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:40px;
+      animation: fadeUp .7s var(--ease) .12s both;
+    }
+
+    .action-bar__right {
+      display:flex;
+      gap:10px;
+      margin-left:auto;
+    }
+
+    .btn {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:12px 24px;
+      border:none;
+      border-radius:var(--radius-sm);
+      font-family:var(--font-body);
+      font-size:.82rem;
+      font-weight:500;
+      letter-spacing:.01em;
+      cursor:pointer;
+      transition:all .35s var(--ease);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .btn svg { width:14px; height:14px; flex-shrink:0; transition:transform .35s var(--ease); }
+
+    .btn--primary {
+      background:linear-gradient(140deg, var(--accent), #7A5530);
+      color:#FFF;
+      box-shadow:var(--shadow-glow);
+    }
+
+    .btn--primary::after {
+      content:'';
+      position:absolute; inset:0;
+      background:linear-gradient(140deg, rgba(255,255,255,.1), transparent);
+      opacity:0;
+      transition:opacity .35s var(--ease);
+    }
+
+    .btn--primary:hover {
+      box-shadow:0 6px 30px rgba(155,112,69,.35), 0 2px 8px rgba(155,112,69,.2);
+      transform:translateY(-2px);
+    }
+
+    .btn--primary:hover::after { opacity:1; }
+    .btn--primary:hover svg { transform:translateX(1px); }
+    .btn--primary:active { transform:translateY(0); }
+
+    .btn--ghost {
+      background:var(--bg-card);
+      color:var(--text-200);
+      border:1.5px solid var(--border);
+    }
+
+    .btn--ghost:hover {
+      background:var(--bg-hover);
+      border-color:var(--border-strong);
+      color:var(--text-100);
+      transform:translateY(-1px);
+    }
+
+    .btn--ghost:active { transform:translateY(0); }
+
+    .btn:disabled {
+      opacity:.25;
+      cursor:not-allowed;
+      transform:none !important;
+      box-shadow:none !important;
+    }
+
+    /* ── STATS ── */
+    .stats { display:none; margin-bottom:28px; }
+    .stats.visible { display:block; }
+
+    .stats__grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));
+      gap:10px;
+    }
+
+    .stat-card {
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:var(--radius-sm);
+      padding:16px 18px;
+      text-align:center;
+      transition:border-color .3s var(--ease), transform .3s var(--ease);
+    }
+
+    .stat-card:hover {
+      border-color:var(--border-mid);
+      transform:translateY(-1px);
+    }
+
+    .stat-card__value {
+      font-family:var(--font-display);
+      font-size:1.65rem;
+      font-weight:400;
+      line-height:1;
+      margin-bottom:4px;
+    }
+
+    .stat-card__label {
+      font-size:.67rem;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--text-400);
+    }
+
+    .stat-card--accent .stat-card__value { color:var(--accent-light); }
+    .stat-card--green  .stat-card__value { color:var(--green); }
+    .stat-card--blue   .stat-card__value { color:var(--blue); }
+    .stat-card--amber  .stat-card__value { color:var(--amber); }
+    .stat-card--purple .stat-card__value { color:var(--purple); }
+
+    /* ── FILTERS ── */
+    .filters { display:none; margin-bottom:20px; }
+    .filters.visible { display:block; }
+
+    .filters__row { display:flex; gap:6px; flex-wrap:wrap; }
+
+    .filter-tab {
+      padding:7px 16px;
+      border:1px solid var(--border);
+      border-radius:20px;
+      font-family:var(--font-body);
+      font-size:.72rem;
+      font-weight:500;
+      color:var(--text-300);
+      background:transparent;
+      cursor:pointer;
+      transition:all .25s var(--ease);
+      letter-spacing:.02em;
+    }
+
+    .filter-tab:hover {
+      border-color:var(--border-strong);
+      color:var(--text-100);
+      background:var(--bg-hover);
+    }
+
+    .filter-tab.active {
+      background:var(--accent-dim);
+      border-color:var(--accent);
+      color:var(--accent-light);
+    }
+
+    .filter-tab__count {
+      display:inline-block;
+      margin-left:5px;
+      font-size:.65rem;
+      opacity:.6;
+    }
+
+    /* ── SEARCH ── */
+    .search-bar { display:none; margin-bottom:20px; }
+    .search-bar.visible { display:block; }
+
+    .search-bar__input {
+      width:100%;
+      padding:11px 16px 11px 40px;
+      border:1px solid var(--border);
+      border-radius:var(--radius-sm);
+      background:var(--bg-card);
+      font-family:var(--font-body);
+      font-size:.84rem;
+      font-weight:400;
+      color:var(--text-100);
+      transition:border-color .3s var(--ease), box-shadow .3s var(--ease);
+    }
+
+    .search-bar__input::placeholder { color:var(--text-400); font-weight:300; }
+
+    .search-bar__input:focus {
+      outline:none;
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px var(--accent-dim);
+    }
+
+    .search-bar__wrap { position:relative; }
+
+    .search-bar__icon {
+      position:absolute;
+      left:14px; top:50%;
+      transform:translateY(-50%);
+      width:15px; height:15px;
+      color:var(--text-400);
+      pointer-events:none;
+    }
+
+    /* ── OUTPUT ── */
+    .output { display:none; }
+    .output.visible { display:block; }
+
+    .output__header {
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      margin-bottom:8px;
+    }
+
+    .output__title {
+      font-family:var(--font-display);
+      font-size:1.4rem;
+      font-weight:400;
+      letter-spacing:-0.02em;
+    }
+
+    .output__timestamp {
+      font-size:.7rem;
+      color:var(--text-400);
+    }
+
+    #outputCards { margin-top:20px; }
+
+    .category {
+      background:var(--bg-card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      margin-bottom:12px;
+      box-shadow:var(--shadow-s);
+      opacity:0;
+      transform:translateY(14px);
+      overflow:hidden;
+      transition:opacity .5s var(--ease),
+                 transform .5s var(--ease),
+                 box-shadow .35s var(--ease),
+                 border-color .35s var(--ease);
+    }
+
+    .category.show { opacity:1; transform:translateY(0); }
+
+    .category:hover {
+      box-shadow:var(--shadow-m);
+      border-color:var(--border-mid);
+    }
+
+    .category__header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:20px 24px;
+      cursor:pointer;
+      user-select:none;
+      transition:background .2s;
+    }
+
+    .category__header:hover { background:var(--bg-hover); }
+
+    .category__left { display:flex; align-items:center; gap:10px; }
+
+    .category__badge {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 13px;
+      border-radius:20px;
+      font-size:.68rem;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:.07em;
+    }
+
+    .category__badge svg { width:11px; height:11px; }
+
+    .category__count { font-size:.68rem; color:var(--text-400); }
+
+    .category__toggle {
+      width:20px; height:20px;
+      color:var(--text-400);
+      transition:transform .3s var(--ease);
+    }
+
+    .category__toggle.collapsed { transform:rotate(-90deg); }
+
+    .category__body {
+      padding:0 24px 20px;
+      overflow:hidden;
+    }
+
+    .category__body.collapsed {
+      max-height:0 !important;
+      padding-bottom:0;
+      opacity:0;
+      transition:max-height .35s var(--ease), opacity .25s var(--ease), padding .25s var(--ease);
+    }
+
+    .badge--action   { background:var(--red-bg);    color:var(--red); }
+    .badge--decision { background:var(--green-bg);   color:var(--green); }
+    .badge--topic    { background:var(--blue-bg);    color:var(--blue); }
+    .badge--people   { background:var(--purple-bg);  color:var(--purple); }
+    .badge--deadline { background:var(--amber-bg);   color:var(--amber); }
+
+    .category__list { list-style:none; }
+
+    .category__item {
+      padding:9px 0;
+      border-bottom:1px solid var(--border);
+      font-size:.86rem;
+      font-weight:300;
+      line-height:1.7;
+      color:var(--text-200);
+      display:flex;
+      align-items:flex-start;
+      gap:11px;
+      transition:color .2s;
+    }
+
+    .category__item:last-child { border-bottom:none; padding-bottom:0; }
+    .category__item:hover { color:var(--text-100); }
+
+    .category__dot {
+      width:5px; height:5px;
+      border-radius:50%;
+      margin-top:9px;
+      flex-shrink:0;
+    }
+
+    .dot--action   { background:var(--red); }
+    .dot--decision { background:var(--green); }
+    .dot--topic    { background:var(--blue); }
+    .dot--people   { background:var(--purple); }
+    .dot--deadline { background:var(--amber); }
+
+    /* Category micro-tags shown on items in "All" view */
+    .item__tags { display:inline-flex; gap:4px; flex-shrink:0; margin-top:4px; }
+
+    .item__tag {
+      font-size:.56rem;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      padding:1px 6px;
+      border-radius:3px;
+      line-height:1.5;
+    }
+
+    .item__tag--action   { background:var(--red-bg);    color:var(--red); }
+    .item__tag--decision { background:var(--green-bg);   color:var(--green); }
+    .item__tag--topic    { background:var(--blue-bg);    color:var(--blue); }
+    .item__tag--people   { background:var(--purple-bg);  color:var(--purple); }
+    .item__tag--deadline { background:var(--amber-bg);   color:var(--amber); }
+
+    .priority {
+      display:inline-block;
+      padding:1px 8px;
+      border-radius:4px;
+      font-size:.62rem;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      margin-right:4px;
+      flex-shrink:0;
+      margin-top:5px;
+    }
+
+    .priority--high   { background:rgba(184,92,74,.15); color:#D4735F; }
+    .priority--medium { background:rgba(184,144,64,.12); color:#C9A855; }
+    .priority--low    { background:rgba(88,128,171,.12); color:#7A9FC4; }
+
+    .no-results {
+      text-align:center;
+      padding:32px 16px;
+      color:var(--text-400);
+      font-size:.84rem;
+      font-weight:300;
+      display:none;
+    }
+
+    .no-results.visible { display:block; }
+
+    .empty-state {
+      text-align:center;
+      padding:52px 24px;
+      color:var(--text-400);
+      font-size:.86rem;
+      font-weight:300;
+      display:none;
+    }
+
+    .empty-state.visible { display:block; }
+
+    .empty-state svg {
+      width:40px; height:40px;
+      margin-bottom:14px;
+      opacity:.25;
+      stroke:var(--text-400);
+    }
+
+    .toast {
+      position:fixed;
+      bottom:28px; left:50%;
+      transform:translateX(-50%) translateY(18px);
+      background:var(--bg-surface);
+      color:var(--text-100);
+      border:1px solid var(--border-strong);
+      padding:11px 22px;
+      border-radius:var(--radius-sm);
+      font-family:var(--font-body);
+      font-size:.8rem;
+      font-weight:500;
+      box-shadow:var(--shadow-l);
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .4s var(--ease), transform .4s var(--ease);
+      z-index:100;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .toast.visible { opacity:1; transform:translateX(-50%) translateY(0); }
+    .toast svg { width:15px; height:15px; color:var(--green); }
+
+    .footer {
+      text-align:center;
+      margin-top:52px;
+      padding-top:22px;
+      border-top:1px solid var(--border);
+      font-size:.68rem;
+      color:var(--text-400);
+      letter-spacing:.05em;
+      animation: fadeUp .7s var(--ease) .3s both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    @keyframes shake {
+      0%,100% { transform:translateX(0); }
+      20% { transform:translateX(-5px); }
+      40% { transform:translateX(5px); }
+      60% { transform:translateX(-3px); }
+      80% { transform:translateX(3px); }
+    }
+
+    @media(max-width:640px) {
+      .app { padding:32px 14px 60px; }
+      .header h1 { font-size:1.7rem; }
+      .input-card { padding:18px; }
+      .action-bar { flex-direction:column; }
+      .action-bar__right { margin-left:0; }
+      .btn { justify-content:center; width:100%; }
+      .stats__grid { grid-template-columns:repeat(2,1fr); }
+      .category__header { padding:16px 18px; }
+      .category__body { padding:0 18px 16px; }
+      .output__header { flex-direction:column; gap:4px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <header class="header">
+    <div class="header__brand">
+      <div class="header__mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+      </div>
+      <h1>Clarity</h1>
+    </div>
+    <div class="header__rule"></div>
+    <p>Paste unstructured meeting notes and organize them into categorized sections — tasks, decisions, deadlines, participants, and discussion points.</p>
+    <div class="header__kbd"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to process &nbsp;·&nbsp; supports .txt and .md file drop</div>
+  </header>
+
+  <div class="input-card" id="inputCard">
+    <div class="input-card__top">
+      <label class="input-card__label" for="rawNotes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+        Input
+      </label>
+      <button class="input-card__sample" onclick="loadSample()">Load example</button>
+    </div>
+    <textarea id="rawNotes" placeholder="Paste meeting notes here, or drop a .txt file..."></textarea>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn--primary" id="btnStructure" onclick="structureNotes()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Structure Notes
+    </button>
+    <div class="action-bar__right">
+      <button class="btn btn--ghost" id="btnExport" onclick="exportMarkdown()" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export .md
+      </button>
+      <button class="btn btn--ghost" id="btnCopy" onclick="copyOutput()" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </button>
+      <button class="btn btn--ghost" id="btnClear" onclick="clearAll()" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <div class="stats" id="statsSection"><div class="stats__grid" id="statsGrid"></div></div>
+  <div class="filters" id="filtersSection"><div class="filters__row" id="filtersRow"></div></div>
+
+  <div class="search-bar" id="searchSection">
+    <div class="search-bar__wrap">
+      <svg class="search-bar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" class="search-bar__input" id="searchInput" placeholder="Filter results..." oninput="applyFilters()" />
+    </div>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <p>No categorizable content found.<br/>Try pasting notes with tasks, decisions, or dates.</p>
+  </div>
+
+  <section class="output" id="outputSection">
+    <div class="output__header">
+      <h2 class="output__title">Structured Output</h2>
+      <span class="output__timestamp" id="outputTimestamp"></span>
+    </div>
+    <div class="no-results" id="noResults">No items match the current filter.</div>
+    <div id="outputCards"></div>
+  </section>
+
+  <footer class="footer">
+    Clarity &mdash; Structured Notes Utility &nbsp;&middot;&nbsp; Created by Santiago Rosa
+  </footer>
+</div>
+
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+
+<script>
+/*  ═══════════════════════════════════════════════════════════════
+    CLARITY — Structured Notes Utility
+    ═══════════════════════════════════════════════════════════════
+    Architecture:
+      1. PARSE  — text → array of SentenceRecord objects (unique)
+      2. STATE  — records stored in a Map keyed by normalized text
+      3. RENDER — reads from state, never duplicates DOM entries
+
+    Each sentence exists as exactly ONE record. A record may belong
+    to multiple categories (stored in record.categories Set).
+    In the "All" view each record renders once, with category tags.
+    In per-category view, only records containing that category show.
+
+    Author : Santiago Rosa
+    License: MIT
+    ═══════════════════════════════════════════════════════════════ */
+
+
+/* ─────────────────────────────────────────────────────────
+   1. CATEGORY DEFINITIONS
+   ───────────────────────────────────────────────────────── */
+
+// Display order also defines priority when assigning a primary category.
+// First match in this array wins "primary".
+const CATEGORIES = [
+  {
+    key: 'actions',
+    label: 'Action Items',
+    badge: 'badge--action',
+    dot: 'dot--action',
+    tagCls: 'item__tag--action',
+    icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+    patterns: [
+      /\b(todo|to-do|to\s+do|action\s+item|follow[\s-]?up)\b/i,
+      // Subject + obligation verb + object (avoids bare "will" in "goodwill" etc.)
+      /\w\s+(will|needs?\s+to|has\s+to|have\s+to|going\s+to)\s+\w/i,
+      /\b(assigned\s+to|responsible\s+for)\b/i,
+      /\b(please|make\s+sure|ensure|don'?t\s+forget)\b/i,
+      // Verb + time-bound deadline in same sentence
+      /\b(send|prepare|create|update|write|draft|schedule|organize|complete|finish|deliver|submit|fix|handle|coordinate)\b.*\b(by|before|asap|tomorrow|next\s+week)\b/i,
+    ]
+  },
+  {
+    key: 'decisions',
+    label: 'Decisions',
+    badge: 'badge--decision',
+    dot: 'dot--decision',
+    tagCls: 'item__tag--decision',
+    icon: '<polyline points="20 6 9 17 4 12"/>',
+    patterns: [
+      /\b(decided|agreed|approved|confirmed|finalized|settled|concluded|resolved)\b/i,
+      /\b(decision|consensus|agreement|green[\s-]?light)\b/i,
+      /\bwe('ll|\s+are\s+going\s+to)\b/i,
+      /\b(go\s+with|move\s+forward\s+with|proceed\s+with|stick\s+with)\b/i,
+    ]
+  },
+  {
+    key: 'deadlines',
+    label: 'Deadlines & Dates',
+    badge: 'badge--deadline',
+    dot: 'dot--deadline',
+    tagCls: 'item__tag--deadline',
+    icon: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+    patterns: [
+      /\b(deadline|due\s+(date|by))\b/i,
+      /\bby\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i,
+      /\bby\s+(end\s+of|eod|eow|next\s+week|tomorrow|tonight)\b/i,
+      /\bby\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+\d{1,2}\b/i,
+      /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s+\d{1,2}(,?\s+\d{4})?\b/i,
+      /\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b/,
+      /\b(q[1-4]\s+\d{4}|next\s+quarter)\b/i,
+    ]
+  },
+  {
+    key: 'topics',
+    label: 'Discussion Points',
+    badge: 'badge--topic',
+    dot: 'dot--topic',
+    tagCls: 'item__tag--topic',
+    icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    patterns: [
+      /\b(discussed|talked\s+about|brought\s+up|mentioned|addressed|covered|explored|examined|debated|went\s+over)\b/i,
+      /\b(topic|issue|concern|question|idea|proposal|suggestion|challenge)\b/i,
+      /\b(what\s+about|how\s+about|regarding|in\s+terms\s+of)\b/i,
+    ]
+  },
+  {
+    key: 'people',
+    label: 'People & Roles',
+    badge: 'badge--people',
+    dot: 'dot--people',
+    tagCls: 'item__tag--people',
+    icon: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    patterns: [
+      /\b(attendees?|participants?|present|joined\s+the|met\s+with)\b/i,
+      /\b(stakeholders?|client|manager|lead|owner)\b/i,
+      /\bthe\s+team\b/i,
+      /\bteam\s+(lead|manager|member|meeting)\b/i,
+    ]
+  },
+];
+
+const CAT_MAP = Object.fromEntries(CATEGORIES.map(c => [c.key, c]));
+
+const PRIORITY_RULES = {
+  high:   /\b(urgent|critical|asap|immediately|blocker|high\s+priority)\b/i,
+  low:    /\b(nice\s+to\s+have|eventually|when\s+possible|low\s+priority)\b/i,
+  medium: /\b(important|needs?\s+to|by\s+(friday|end\s+of\s+week|eow|tomorrow))\b/i,
+};
+
+
+/* ─────────────────────────────────────────────────────────
+   2. SENTENCE RECORD MODEL
+   ─────────────────────────────────────────────────────────
+   Every unique sentence becomes exactly one SentenceRecord.
+   The Map<normalizedKey → SentenceRecord> guarantees dedup.
+   ───────────────────────────────────────────────────────── */
+
+/**
+ * @typedef {Object} SentenceRecord
+ * @property {number}      id         - unique sequential ID
+ * @property {string}      raw        - original text for display
+ * @property {string}      norm       - normalized form for dedup
+ * @property {Set<string>} categories - all matched category keys
+ * @property {string|null} primary    - first matching category key
+ * @property {string|null} priority   - 'high'|'medium'|'low'|null
+ */
+
+let nextId = 0;
+
+function createRecord(raw) {
+  return {
+    id:         nextId++,
+    raw:        cleanSentence(raw),
+    norm:       normalize(raw),
+    categories: new Set(),
+    primary:    null,
+    priority:   null,
+  };
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   3. TEXT NORMALIZATION & SPLITTING
+   ───────────────────────────────────────────────────────── */
+
+/** Normalize for dedup: lowercase, strip non-alphanumeric (keep spaces), collapse whitespace */
+function normalize(str) {
+  return str.toLowerCase().replace(/[^a-z0-9\s\u00C0-\u024F]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/** Clean a sentence for display: trim trailing dots/spaces, collapse whitespace */
+function cleanSentence(s) {
+  return s.replace(/^[.\s\-•–—]+/, '').replace(/[.\s]+$/, '').replace(/\s{2,}/g, ' ').trim();
+}
+
+/**
+ * Split raw text into sentence strings.
+ * Strategy:
+ *  1. Normalize list markers (bullets, dashes at line start) into sentence breaks
+ *  2. Preserve line breaks as breaks (a new line usually = new thought in notes)
+ *  3. Split on sentence-ending punctuation
+ *  4. Filter out trivially short fragments
+ */
+function splitIntoSentences(text) {
+  // Step 1: split on line breaks first (preserves note structure better than replacing with '.')
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+
+  const sentences = [];
+
+  for (const line of lines) {
+    // Strip leading bullet/dash markers
+    const cleaned = line.replace(/^[\s]*[•\-–—\*]\s*/, '');
+
+    // Split line on sentence-ending punctuation
+    const parts = cleaned.split(/(?<=[.!?;])\s+/);
+
+    for (const part of parts) {
+      const trimmed = part.trim().replace(/^[.\s]+/, '');
+      // Minimum 10 chars avoids fragments like "OK." or "Yes."
+      if (trimmed.length >= 10) {
+        sentences.push(trimmed);
+      }
+    }
+  }
+
+  return sentences;
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   4. CLASSIFICATION
+   ───────────────────────────────────────────────────────── */
+
+/** Test a sentence against a category's patterns */
+function matchesCategory(sentence, cat) {
+  return cat.patterns.some(r => r.test(sentence));
+}
+
+/** Detect priority for an action item */
+function detectPriority(sentence) {
+  if (PRIORITY_RULES.high.test(sentence))   return 'high';
+  if (PRIORITY_RULES.low.test(sentence))    return 'low';
+  if (PRIORITY_RULES.medium.test(sentence)) return 'medium';
+  return null;
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   5. NAME EXTRACTION (REFACTORED)
+   ─────────────────────────────────────────────────────────
+   Two-pass approach:
+     Pass A — Contextual: find names appearing before action verbs
+              (e.g., "Sarah will", "Martín needs to"). High confidence.
+     Pass B — List-based: find names in "Attendees: X, Y, Z" patterns.
+              High confidence.
+
+   Both passes use a Unicode-aware name regex and an extensive
+   blocklist to eliminate false positives.
+   ───────────────────────────────────────────────────────── */
+
+// Blocklist: common English words that start with uppercase at sentence beginnings,
+// plus months, days, regions, business terms. Kept lowercase for comparison.
+const NAME_BLOCKLIST = new Set([
+  // Pronouns & articles
+  'the','this','that','these','those','we','they','our','their','he','she','it','his','her',
+  // Days
+  'monday','tuesday','wednesday','thursday','friday','saturday','sunday',
+  // Months
+  'january','february','march','april','may','june','july','august',
+  'september','october','november','december',
+  'jan','feb','mar','apr','jun','jul','aug','sep','oct','nov','dec',
+  // Regions & places
+  'europe','asia','africa','america','americas','latin','north','south','east','west',
+  'united','states','kingdom',
+  // Generic capitalized nouns common in meeting notes
+  'action','item','items','discussion','quarterly','annual','weekly','monthly',
+  'follow','deadline','deadlines','todo','update','review','report','meeting',
+  'decision','decisions','agreed','approved','budget','project','plan','sprint',
+  'team','status','summary','overview','agenda','objective','goal','goals',
+  'key','note','notes','new','next','final','general','important','urgent','critical',
+  'mobile','beta','pro','enterprise','infrastructure','pricing','migration',
+  'attendees','participants','present','identified',
+  // Verbs that can start sentences
+  'discussed','mentioned','raised','covered','addressed','explored','debated',
+  'assigned','confirmed','concluded','resolved','settled','finalized',
+  'please','ensure','prepare','create','schedule','organize','complete',
+  'deliver','submit','send','handle','coordinate','fix','finish','write','draft',
+  // Misc
+  'also','however','therefore','furthermore','moreover','currently','recently',
+  'should','could','would','must','need','will',
+  'q1','q2','q3','q4','eod','eow','asap',
+]);
+
+/**
+ * Unicode-aware regex for a single capitalized word (2-20 chars).
+ * Supports accented characters: á, é, í, ó, ú, ñ, ü, etc.
+ * \p{Lu} = uppercase letter, \p{Ll} = lowercase letter, \p{M} = combining mark.
+ */
+const UNAME_WORD = '[\\p{Lu}][\\p{Ll}\\p{M}]{1,19}';
+const RE_NAME_WORD = new RegExp(UNAME_WORD, 'u');
+
+function isBlocklisted(word) {
+  return NAME_BLOCKLIST.has(word.toLowerCase());
+}
+
+/** Validate a candidate name: at least one non-blocklisted word */
+function isValidName(candidate) {
+  const words = candidate.split(/\s+/);
+  // All words must look like names (start uppercase, 2+ chars)
+  if (!words.every(w => RE_NAME_WORD.test(w))) return false;
+  // At least one word must NOT be in the blocklist
+  return words.some(w => !isBlocklisted(w));
+}
+
+function extractNames(text) {
+  const found = new Map(); // name → confidence score
+
+  // ── Pass A: Contextual names before action verbs ──
+  // Matches: "Sarah will", "Martín needs to", "Jake Morrison should"
+  const ctxPattern = new RegExp(
+    `(${UNAME_WORD}(?:\\s+${UNAME_WORD})?)` +
+    `\\s+(?:will|needs?\\s+to|has\\s+to|should|must|is\\s+going\\s+to|opened|mentioned|raised|brought)\\b`,
+    'gu'
+  );
+
+  let m;
+  while ((m = ctxPattern.exec(text)) !== null) {
+    const name = m[1].trim();
+    if (isValidName(name)) {
+      found.set(name, (found.get(name) || 0) + 3); // high confidence
+    }
+  }
+
+  // ── Pass B: List-based extraction ──
+  // Matches: "Attendees: Sarah Chen, Jake Morrison, Lisa Park"
+  const listPattern = /\b(?:attendees?|participants?|present|met\s+with)\s*[:]\s*(.+)/gi;
+  while ((m = listPattern.exec(text)) !== null) {
+    const segment = m[1].split(/[,;&]+/);
+    for (const chunk of segment) {
+      const trimmed = chunk.trim();
+      // Match 1-3 capitalized words
+      const nameMatch = trimmed.match(new RegExp(`^(${UNAME_WORD}(?:\\s+${UNAME_WORD}){0,2})`, 'u'));
+      if (nameMatch && isValidName(nameMatch[1])) {
+        found.set(nameMatch[1], (found.get(nameMatch[1]) || 0) + 3);
+      }
+    }
+  }
+
+  // ── Pass C: Names appearing as sentence subjects (weaker signal) ──
+  // Only at the start of sentences, followed by a verb
+  const subjectPattern = new RegExp(
+    `(?:^|[.!?]\\s+)(${UNAME_WORD}(?:\\s+${UNAME_WORD})?)\\s+(?:also|then)?\\s*` +
+    `(?:said|noted|suggested|recommended|proposed|reported|confirmed|explained|asked|requested|agreed)\\b`,
+    'gmu'
+  );
+  while ((m = subjectPattern.exec(text)) !== null) {
+    const name = m[1].trim();
+    if (isValidName(name)) {
+      found.set(name, (found.get(name) || 0) + 2);
+    }
+  }
+
+  // Return names sorted by confidence descending, minimum confidence 2
+  return [...found.entries()]
+    .filter(([, score]) => score >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name]) => name);
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   6. MAIN PARSE PIPELINE (pure data, no DOM)
+   ─────────────────────────────────────────────────────────
+   Returns { records: SentenceRecord[], names: string[],
+             wordCount: number, sentenceCount: number }
+   ───────────────────────────────────────────────────────── */
+
+function parse(rawText) {
+  nextId = 0;
+  const sentences = splitIntoSentences(rawText);
+  const recordMap = new Map(); // norm → SentenceRecord
+
+  for (const raw of sentences) {
+    const norm = normalize(raw);
+
+    // Dedup: skip if we already have a record for this normalized text
+    if (recordMap.has(norm)) continue;
+
+    const record = createRecord(raw);
+
+    // Classify against all categories
+    for (const cat of CATEGORIES) {
+      if (matchesCategory(raw, cat)) {
+        record.categories.add(cat.key);
+      }
+    }
+
+    // Skip sentences that matched nothing
+    if (record.categories.size === 0) continue;
+
+    // Primary category = first match in CATEGORIES order (priority order)
+    for (const cat of CATEGORIES) {
+      if (record.categories.has(cat.key)) {
+        record.primary = cat.key;
+        break;
+      }
+    }
+
+    // Priority detection for action items
+    if (record.categories.has('actions')) {
+      record.priority = detectPriority(raw);
+    }
+
+    recordMap.set(norm, record);
+  }
+
+  // Extract people names from the original text
+  const names = extractNames(rawText);
+
+  return {
+    records:       [...recordMap.values()],
+    names,
+    wordCount:     rawText.trim().split(/\s+/).filter(w => w.length > 0).length,
+    sentenceCount: sentences.length,
+  };
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   7. APPLICATION STATE
+   ───────────────────────────────────────────────────────── */
+
+let appState = {
+  records:       [],  // SentenceRecord[]
+  names:         [],  // string[]
+  wordCount:     0,
+  sentenceCount: 0,
+  activeFilter:  'all',
+};
+
+
+/* ─────────────────────────────────────────────────────────
+   8. RENDERING (reads from appState, writes to DOM)
+   ───────────────────────────────────────────────────────── */
+
+function structureNotes() {
+  const raw = document.getElementById('rawNotes').value.trim();
+  if (!raw) { shakeButton(); return; }
+
+  const result = parse(raw);
+  appState = { ...result, activeFilter: 'all' };
+
+  const emptyEl  = document.getElementById('emptyState');
+  const outputEl = document.getElementById('outputSection');
+
+  if (result.records.length === 0) {
+    outputEl.classList.remove('visible');
+    emptyEl.classList.add('visible');
+    hideControls();
+    enableSecondary();
+    return;
+  }
+
+  emptyEl.classList.remove('visible');
+  renderStats();
+  renderFilters();
+  renderOutput();
+  showControls();
+  enableSecondary();
+}
+
+/** Stats bar — all counts derived from appState, no inflation */
+function renderStats() {
+  const { records, wordCount, sentenceCount } = appState;
+  const readMin = Math.max(1, Math.ceil(wordCount / 200));
+
+  // Count unique categories that have at least one record
+  const activeCats = new Set();
+  for (const r of records) {
+    for (const c of r.categories) activeCats.add(c);
+  }
+
+  const data = [
+    { label: 'Words',      value: wordCount,          cls: 'stat-card--accent' },
+    { label: 'Read Time',  value: `~${readMin} min`,  cls: 'stat-card--blue'   },
+    { label: 'Sentences',  value: sentenceCount,       cls: 'stat-card--purple' },
+    { label: 'Classified', value: records.length,      cls: 'stat-card--green'  },
+    { label: 'Categories', value: activeCats.size,     cls: 'stat-card--amber'  },
+  ];
+
+  document.getElementById('statsGrid').innerHTML = data.map(d => `
+    <div class="stat-card ${d.cls}">
+      <div class="stat-card__value">${d.value}</div>
+      <div class="stat-card__label">${d.label}</div>
+    </div>`).join('');
+}
+
+/** Filter tabs with accurate per-category counts */
+function renderFilters() {
+  const { records } = appState;
+  const row = document.getElementById('filtersRow');
+
+  // Count records per category (a record in 2 categories counts in both tabs)
+  const counts = {};
+  for (const cat of CATEGORIES) counts[cat.key] = 0;
+  for (const r of records) {
+    for (const c of r.categories) counts[c]++;
+  }
+
+  let html = `<button class="filter-tab active" onclick="setFilter(this,'all')">All<span class="filter-tab__count">${records.length}</span></button>`;
+
+  for (const cat of CATEGORIES) {
+    if (counts[cat.key] > 0) {
+      html += `<button class="filter-tab" onclick="setFilter(this,'${cat.key}')">${cat.label}<span class="filter-tab__count">${counts[cat.key]}</span></button>`;
+    }
+  }
+
+  row.innerHTML = html;
+}
+
+/**
+ * Render output cards.
+ * - "All" view: group records by their PRIMARY category. Each record appears once.
+ *   Multi-category records show small category tags.
+ * - Per-category view: show all records that have that category in their set.
+ *   Grouped in a single card. Each record appears once.
+ */
+function renderOutput() {
+  const { records, names, activeFilter } = appState;
+  const container = document.getElementById('outputCards');
+  const section   = document.getElementById('outputSection');
+
+  container.innerHTML = '';
+
+  document.getElementById('outputTimestamp').textContent =
+    new Date().toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+
+  if (activeFilter === 'all') {
+    renderAllView(records, names, container);
+  } else {
+    renderCategoryView(records, names, activeFilter, container);
+  }
+
+  section.classList.add('visible');
+  document.getElementById('noResults').classList.remove('visible');
+  section.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/** "All" view: one card per category, records assigned by primary. No duplicates. */
+function renderAllView(records, names, container) {
+  // Group records by primary category
+  const groups = {};
+  for (const cat of CATEGORIES) groups[cat.key] = [];
+  for (const r of records) {
+    groups[r.primary].push(r);
+  }
+
+  // Inject names summary into people group if applicable
+  if (names.length > 0) {
+    injectNamesSummary(groups, names);
+  }
+
+  let delay = 0;
+  for (const cat of CATEGORIES) {
+    const items = groups[cat.key];
+    if (!items.length) continue;
+
+    const card = buildCategoryCard(cat, items, true);
+    container.appendChild(card);
+    setTimeout(() => card.classList.add('show'), 80 + delay);
+    delay += 90;
+  }
+}
+
+/** Per-category view: single card with all records tagged for that category */
+function renderCategoryView(records, names, catKey, container) {
+  const cat   = CAT_MAP[catKey];
+  const items = records.filter(r => r.categories.has(catKey));
+
+  if (catKey === 'people' && names.length > 0) {
+    // Prepend a synthetic record for names
+    const nameRecord = {
+      id: -1,
+      raw: `Identified: ${names.join(', ')}`,
+      categories: new Set(['people']),
+      primary: 'people',
+      priority: null,
+    };
+    items.unshift(nameRecord);
+  }
+
+  if (!items.length) return;
+
+  const card = buildCategoryCard(cat, items, false);
+  container.appendChild(card);
+  setTimeout(() => card.classList.add('show'), 80);
+}
+
+/** Inject a synthetic names record into the people group */
+function injectNamesSummary(groups, names) {
+  groups.people.unshift({
+    id: -1,
+    raw: `Identified: ${names.join(', ')}`,
+    categories: new Set(['people']),
+    primary: 'people',
+    priority: null,
+  });
+}
+
+/** Build a single collapsible category card DOM element */
+function buildCategoryCard(cat, items, showTags) {
+  const card = document.createElement('div');
+  card.className  = 'category';
+  card.dataset.key = cat.key;
+
+  const listHTML = items.map(record => {
+    const priHTML = record.priority
+      ? `<span class="priority priority--${record.priority}">${record.priority}</span>`
+      : '';
+
+    // In "All" view, show micro-tags for multi-category records
+    let tagsHTML = '';
+    if (showTags && record.categories.size > 1) {
+      const tags = [...record.categories]
+        .map(k => `<span class="item__tag ${CAT_MAP[k].tagCls}">${CAT_MAP[k].label.split(' ')[0]}</span>`)
+        .join('');
+      tagsHTML = `<span class="item__tags">${tags}</span>`;
+    }
+
+    return `<li class="category__item" data-id="${record.id}">
+      <span class="category__dot ${cat.dot}"></span>
+      ${priHTML}${escapeHTML(record.raw)}${tagsHTML}
+    </li>`;
+  }).join('');
+
+  card.innerHTML = `
+    <div class="category__header" onclick="toggleCategory(this)">
+      <div class="category__left">
+        <span class="category__badge ${cat.badge}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${cat.icon}</svg>
+          ${cat.label}
+        </span>
+        <span class="category__count">${items.length} item${items.length !== 1 ? 's' : ''}</span>
+      </div>
+      <svg class="category__toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="category__body">
+      <ul class="category__list">${listHTML}</ul>
+    </div>`;
+
+  return card;
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   9. FILTERING & SEARCH
+   ───────────────────────────────────────────────────────── */
+
+function setFilter(el, key) {
+  appState.activeFilter = key;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('searchInput').value = '';
+  renderOutput(); // full re-render from state (clean, no DOM hacks)
+}
+
+function applyFilters() {
+  const query = document.getElementById('searchInput').value.toLowerCase().trim();
+  const items = document.querySelectorAll('.category__item');
+  const cards = document.querySelectorAll('.category');
+  let anyVisible = false;
+
+  cards.forEach(card => {
+    let cardVisible = false;
+    card.querySelectorAll('.category__item').forEach(item => {
+      const match = !query || item.textContent.toLowerCase().includes(query);
+      item.style.display = match ? '' : 'none';
+      if (match) cardVisible = true;
+    });
+    card.style.display = cardVisible ? '' : 'none';
+    if (cardVisible) anyVisible = true;
+  });
+
+  document.getElementById('noResults').classList.toggle('visible', !anyVisible);
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   10. COLLAPSE / EXPAND
+   ───────────────────────────────────────────────────────── */
+
+function toggleCategory(headerEl) {
+  headerEl.nextElementSibling.classList.toggle('collapsed');
+  headerEl.querySelector('.category__toggle').classList.toggle('collapsed');
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   11. EXPORT & COPY
+   ───────────────────────────────────────────────────────── */
+
+function exportMarkdown() {
+  const { records, names } = appState;
+  if (!records.length) return;
+
+  const ts = new Date().toLocaleString('en-US', {
+    weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit'
+  });
+
+  let md = `# Meeting Notes — Structured Output\n_${ts}_\n\n---\n\n`;
+
+  // Group by primary for export (same as "All" view logic)
+  const groups = {};
+  for (const cat of CATEGORIES) groups[cat.key] = [];
+  for (const r of records) groups[r.primary].push(r);
+
+  if (names.length) {
+    groups.people.unshift({ raw: `Identified: ${names.join(', ')}`, priority: null, categories: new Set(['people']) });
+  }
+
+  for (const cat of CATEGORIES) {
+    if (!groups[cat.key].length) continue;
+    md += `## ${cat.label}\n\n`;
+    for (const r of groups[cat.key]) {
+      const tag = r.priority ? ` \`${r.priority.toUpperCase()}\`` : '';
+      md += `- ${r.raw}${tag}\n`;
+    }
+    md += '\n';
+  }
+
+  const blob = new Blob([md], { type:'text/markdown' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `meeting-notes-${Date.now()}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Markdown file downloaded');
+}
+
+function copyOutput() {
+  const cards = document.querySelectorAll('.category');
+  if (!cards.length) return;
+
+  let text = 'STRUCTURED MEETING NOTES\n\n';
+  cards.forEach(card => {
+    const label = card.querySelector('.category__badge').textContent.trim();
+    text += `${label.toUpperCase()}\n`;
+    card.querySelectorAll('.category__item').forEach(item => {
+      text += `  - ${item.textContent.replace(/\s+/g, ' ').trim()}\n`;
+    });
+    text += '\n';
+  });
+
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard'));
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   12. SAMPLE DATA
+   ───────────────────────────────────────────────────────── */
+
+function loadSample() {
+  document.getElementById('rawNotes').value =
+`Meeting: Q1 Product Review — January 15
+
+Attendees: Sarah Chen, Jake Morrison, Lisa Park, David Kim, Martín López
+
+Sarah opened the meeting by discussing the current sprint status. We reviewed the product roadmap and agreed to prioritize the mobile redesign over the analytics dashboard this quarter.
+
+Jake mentioned the QA backlog is growing. He will handle critical bug fixes by Friday and needs to coordinate with the backend team ASAP. This is urgent and a blocker for the release.
+
+Lisa brought up user feedback from the beta program. The team discussed onboarding flow improvements and decided to implement a guided setup wizard. Lisa needs to update the UX mockups by next Wednesday.
+
+David raised concerns about infrastructure costs. We agreed to move to a reserved instance model, which should reduce costs by 30%. Decision: David will prepare the migration plan by end of month.
+
+Martín López will lead the Latin America rollout and coordinate with regional partners.
+
+Key deadlines:
+- Mobile redesign wireframes due January 22
+- QA bug fix sprint ends January 19
+- Infrastructure migration plan by January 31
+- Beta feedback report due February 1
+
+TODO: Sarah will send the updated roadmap to stakeholders by tomorrow. Follow-up meeting scheduled for January 22.
+
+We also discussed the new pricing model. The team agreed to keep the freemium tier but increase the Pro plan price to $29/month starting Q2. Jake should prepare the billing integration changes.
+
+Action item: Lisa will create a competitive analysis document. Low priority but would be nice to have before the board meeting in March.`;
+  showToast('Example loaded');
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   13. UTILITIES
+   ───────────────────────────────────────────────────────── */
+
+function escapeHTML(s) {
+  const el = document.createElement('div');
+  el.textContent = s;
+  return el.innerHTML;
+}
+
+function clearAll() {
+  document.getElementById('rawNotes').value = '';
+  document.getElementById('outputSection').classList.remove('visible');
+  document.getElementById('emptyState').classList.remove('visible');
+  document.getElementById('outputCards').innerHTML = '';
+  document.getElementById('searchInput').value = '';
+  appState = { records:[], names:[], wordCount:0, sentenceCount:0, activeFilter:'all' };
+  hideControls();
+  disableSecondary();
+  document.getElementById('rawNotes').focus();
+}
+
+function shakeButton() {
+  const btn = document.getElementById('btnStructure');
+  btn.style.animation = 'none';
+  btn.offsetHeight;
+  btn.style.animation = 'shake .4s ease';
+  setTimeout(() => btn.style.animation = '', 400);
+  document.getElementById('rawNotes').focus();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('visible');
+  setTimeout(() => t.classList.remove('visible'), 2200);
+}
+
+function enableSecondary() {
+  ['btnClear','btnCopy','btnExport'].forEach(id => document.getElementById(id).disabled = false);
+}
+
+function disableSecondary() {
+  ['btnClear','btnCopy','btnExport'].forEach(id => document.getElementById(id).disabled = true);
+}
+
+function showControls() {
+  ['statsSection','filtersSection','searchSection'].forEach(id =>
+    document.getElementById(id).classList.add('visible'));
+}
+
+function hideControls() {
+  ['statsSection','filtersSection','searchSection'].forEach(id =>
+    document.getElementById(id).classList.remove('visible'));
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   14. EVENT LISTENERS
+   ───────────────────────────────────────────────────────── */
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    structureNotes();
+  }
+});
+
+const inputCard = document.getElementById('inputCard');
+
+inputCard.addEventListener('dragover', e => {
+  e.preventDefault();
+  inputCard.classList.add('drag-over');
+});
+
+inputCard.addEventListener('dragleave', () => inputCard.classList.remove('drag-over'));
+
+inputCard.addEventListener('drop', e => {
+  e.preventDefault();
+  inputCard.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById('rawNotes').value = ev.target.result;
+      showToast(`Loaded: ${file.name}`);
+    };
+    reader.readAsText(file);
+  } else {
+    showToast('Unsupported file — use .txt or .md');
+  }
+});
+</script>
+
+</body>
+</html>
